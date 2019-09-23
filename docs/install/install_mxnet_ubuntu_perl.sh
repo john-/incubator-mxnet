@@ -25,16 +25,19 @@
 ######################################################################
 
 PERL_ROOT=${HOME}
+JOBS=$(nproc)
 
-while getopts r: o
+while getopts ':p:j:' o
 do case "$o" in
-    r) PERL_ROOT="$OPTARG";;
-    [?]) print >&2 "Usage: $0 [-r <perl root directory>]"
+    p) PERL_ROOT="$OPTARG";;
+    j) JOBS="$OPTARG";;
+    [?]) print >&2 "Usage: $0 [-p <perl root directory>] [-j <number of jobs to run simultaneously>"
 	exit 1;;
     esac
 done
-#shift $OPTIND-1
+shift "$(($OPTIND -1))"
 
+# this list based on python install script and maybe can be reduced
 set -ex
 sudo apt-get update
 sudo apt-get install -y \
@@ -56,7 +59,12 @@ sudo apt-get install -y \
     sudo \
     unzip \
     virtualenv \
-    wget
+    wget \
+    libmouse-perl \
+    pdl \
+    cpanminus \
+    swig \
+    libgraphviz-perl
 
 cd ../../
 
@@ -71,17 +79,14 @@ else
 fi
 
 echo "Building MXNet core. This can take few minutes..."
-#make -j $(nproc) $make_param
-#make -j 1 $make_params  # for Odroid use one job to avoid OOM
+make -j $JOBS $make_param
 
 echo "Install perl interface..."
-
 
 MXNET_HOME=${PWD}
 export LD_LIBRARY_PATH=${MXNET_HOME}/lib
 export PERL5LIB=${PERL_ROOT}/perl5/lib/perl5
 
-sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
 cpanm -q -L "${PERL_ROOT}/perl5" Function::Parameters Hash::Ordered PDL::CCS
 
 cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
